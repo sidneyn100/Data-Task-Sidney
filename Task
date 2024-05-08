@@ -1,0 +1,175 @@
+#importing relevant packages
+import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
+#Step 1: Generating a template sequence of 100 base pairs, with 60% GC content. 
+
+bases = ['A', 'C', 'G', 'T']
+
+#This is a function to check GC content is 60% of the generated sequence
+def gc_content(template_seq):
+    return template_seq.count('C') + template_seq.count('G') == 60
+
+#This is a loop to continue generating a bp sequence until GC = 60%
+while True:
+    template_seq = ''.join(np.random.choice(list(bases)) for _ in range(100))
+    if gc_content(template_seq):
+        break
+    
+print(template_seq)
+print(template_seq.count('C') + template_seq.count('G'))
+
+
+#Step 2: Generate 3 sets of 100 sequences based on the template sequence with error rates of 2%, 5% and 10%.
+# 3 types of errors
+#Insertion = extra base is added to the sequence
+#Deletion = base is deleted from the sequence
+#Mismatch = one base is replaced with another
+
+def mutate_sequence(template_seq, mutation_rate):
+    
+    mutation_count = int(len(template_seq) * mutation_rate)
+    error_types = ['insertion', 'deletion', 'mismatch'] 
+    
+    #definition and functions for the error types 
+    def insertion(template_seq,x):
+        template_seq = template_seq[:x] + np.random.choice(bases) + template_seq[x:]
+        return template_seq
+    def deletion(template_seq,x):                                     
+        template_seq = template_seq[:x] + template_seq[x+1:]
+        return template_seq
+    def mismatch(template_seq,x):      
+        template_seq = template_seq[:x] + np.random.choice(bases) + template_seq[x+1:]
+        return template_seq
+    #Here I have created a While True loop, which will break once there 
+    #are more mutations in the second half of the sequence than the first. 
+   
+    while True:
+        mutations = []
+        positions = []
+        early_seq = 0
+        late_seq = 0
+     
+        for _ in range(mutation_count):
+            x = np.random.randint(0, len(template_seq))
+            if x >= len(template_seq) // 2: 
+                late_seq += 1
+            else: 
+                early_seq += 1
+            positions.append(x)
+            mutation = np.random.choice(list(error_types))
+            mutations.append(mutation)
+            if mutation == 'insertion':
+                template_seq = insertion(template_seq,x)
+            elif mutation == 'deletion':
+                template_seq = deletion(template_seq,x)
+            elif mutation == 'mismatch':
+                template_seq = mismatch(template_seq,x)
+                
+     #Part C - plot the error type distribution within the sequence.        
+        x = mutations
+        y = positions
+
+        plt.scatter(x,y)
+        plt.ylabel("Position (bp)")
+        plt.xlabel("Mutation type")
+        plt.ylim(0,105)
+        plt.title("Error type position and distribution within sequence")
+        plt.show()
+       
+        if late_seq > early_seq:
+            break
+        
+    return template_seq 
+
+
+error2percent_seq = mutate_sequence(template_seq, 0.02)
+print('2% error mutated sequence:', error2percent_seq)
+print(len(error2percent_seq))
+error5percent_seq = mutate_sequence(template_seq, 0.05)
+print('5% error mutated sequence:', error5percent_seq)
+print(len(error5percent_seq))
+error10percent_seq = mutate_sequence(template_seq, 0.1)
+print('10% error mutated sequence:', error10percent_seq)
+print(len(error10percent_seq))
+
+
+#Step 3: Plot one figure to show the sequence length distribution per error rate.
+error_rate = ['0', '2', '5', '10']
+seq_len_distr = [len(template_seq), len(error2percent_seq), len(error5percent_seq), len(error10percent_seq)]
+x = error_rate
+y = seq_len_distr
+
+plt.bar(x,y, color = "black")
+plt.ylabel("Sequence Length (No. of bp)")
+plt.xlabel("Error rate %")
+plt.ylim(95,105)
+plt.title("Sequence length per error rate")
+
+
+plt.show()
+
+#Step 4: Plot one figure to show the GC content per error rate.
+#Creating a function to calculate the GC content of each sequence.
+def gc_count(sequence):
+    return sequence.count('C') + sequence.count('G')
+
+error_rate = ['0', '2', '5', '10']
+gccount = [gc_count(template_seq), gc_count(error2percent_seq), gc_count(error5percent_seq),gc_count(error10percent_seq)]
+x = error_rate
+y = gccount
+
+plt.bar(x,y, color = 'black')
+plt.ylabel("GC Content (%)")
+plt.xlabel("Error rate %")
+plt.ylim(55,65)
+plt.title("Sequence GC content per error rate")
+
+
+plt.show()
+
+#Step 5: Plot homopolymer ratio relative to sequence length per nucleotide per error rate.
+
+#Here i have made a function to calculate homopolymer ratio per sequence length
+def hpsl_ratio(sequence, nucleotide):
+    #This function calculates homopolymer length. 
+    def homopolymer_length(sequence, nucleotide):
+        homopolymer = 0   
+        in_homopolymer = False
+    
+        for i in range(len(sequence)-1):
+            if sequence[i] == nucleotide and sequence[i+1] == nucleotide:
+                if in_homopolymer== False:
+                    in_homopolymer = True
+                    homopolymer= homopolymer+2
+                else:
+                    homopolymer= homopolymer+1
+            else:
+                if in_homopolymer:
+                    in_homopolymer = False
+        return homopolymer
+    homopolymer_length = int(homopolymer_length(sequence, nucleotide))
+    sequence_nuc_length = int(sequence.count(nucleotide))
+    hpsl_ratio = homopolymer_length/sequence_nuc_length
+    return hpsl_ratio
+
+#Here is the plot via line graph - to effectively show the different nucleotides across each error rate
+
+error_rate = ['0', '2', '5', '10']
+bases = ['A', 'C', 'G', 'T']
+homopolymer_ratios = {
+    'A': [hpsl_ratio(template_sequence, 'A'), hpsl_ratio(error2percent_seq, 'A'), hpsl_ratio(error5percent_seq, 'A'), hpsl_ratio(error2percent_seq, 'A')], 
+    'C': [hpsl_ratio(template_sequence, 'C'), hpsl_ratio(error2percent_seq, 'C'), hpsl_ratio(error5percent_seq, 'C'), hpsl_ratio(error2percent_seq, 'C')],
+    'G': [hpsl_ratio(template_sequence, 'G'), hpsl_ratio(error2percent_seq, 'G'), hpsl_ratio(error5percent_seq, 'G'), hpsl_ratio(error2percent_seq, 'G')],
+    'T': [hpsl_ratio(template_sequence, 'T'), hpsl_ratio(error2percent_seq, 'T'), hpsl_ratio(error5percent_seq, 'T'), hpsl_ratio(error2percent_seq, 'T')],
+}
+
+# Plotting
+for base in bases:
+    plt.plot(error_rate, homopolymer_ratios[base], label=base)
+
+plt.xlabel('Error Rate %')
+plt.ylabel('Homopolymer Ratio')
+plt.title('Homopolymer Ratio Relative to Sequence Length per Nucleotide per Error Rate')
+plt.legend()
+plt.show()
